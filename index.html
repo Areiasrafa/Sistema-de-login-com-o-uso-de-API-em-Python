@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Frontend</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">        
+        <h1>Lista de Usuários</h1>
+        <ul id="user-list"></ul>
+        <h2>Adicionar Usuário</h2>
+        <form id="user-form">
+            <input type="text" id="name" placeholder="Nome" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <button type="submit">Adicionar</button>
+        </form>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/users'; // Puxa a URL da API
+
+        // busca e exibe a lista de usuários
+        async function fetchUsers() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Erro ao buscar usuários');
+                const users = await response.json();
+
+                const userList = document.getElementById('user-list');
+                userList.innerHTML = ''; // Limpa a lista antes de atualizar
+                users.forEach(user => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        ${user.name} (${user.email})
+                        <button onclick="editUser(${user.id})">Editar</button>
+                        <button onclick="deleteUser(${user.id})">Excluir</button>
+                    `;
+                    userList.appendChild(li);
+                });
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao carregar usuários.');
+            }
+        }
+
+        // Adicionar um usuário
+        async function addUser(event) {
+            event.preventDefault(); // Evita o reload do formulário
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+
+            if (!name || !email) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Erro ao adicionar usuário');
+                }
+
+                alert('Usuário adicionado com sucesso!');
+                document.getElementById('user-form').reset(); 
+                fetchUsers(); // Atualiza a lista de usuários
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao adicionar usuário.');
+            }
+        }
+
+        // Editar um usuário
+        async function editUser(userId) {
+            const newName = prompt("Digite o novo nome:");
+            const newEmail = prompt("Digite o novo email:");
+
+            if (!newName || !newEmail) {
+                alert("Os campos de nome e email são obrigatórios.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName, email: newEmail }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Erro ao editar usuário');
+                }
+
+                alert('Usuário atualizado com sucesso!');
+                fetchUsers(); // Atualiza a lista de usuários
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao editar usuário.');
+            }
+        }
+
+        // Deletar um usuário
+        async function deleteUser(userId) {
+            if (!confirm("Tem certeza que deseja excluir este usuário?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${userId}`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Erro ao excluir usuário');
+                }
+
+                alert('Usuário excluído com sucesso!');
+                fetchUsers(); // Atualiza a lista de usuários
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao excluir usuário.');
+            }
+        }
+        
+        document.getElementById('user-form').addEventListener('submit', addUser);
+
+        // Carrega os usuários ao iniciar a página
+        fetchUsers();
+    </script>
+</body>
+</html>
